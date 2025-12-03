@@ -14,11 +14,9 @@ import {
   Mail,
   X,
   CheckCircle,
-  Star,
   Lock,
   EyeOff,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface Driver {
   id: number;
@@ -27,12 +25,18 @@ interface Driver {
   phone: string;
   license_number: string;
   experience_years: number;
-  rating: number;
   status: "active" | "inactive" | "suspended";
   total_trips: number;
   completed_trips: number;
   current_trip_id?: number;
   created_at: string;
+  vehicle_owner_id?: number;
+  vehicle_owner?: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+  } | null;
 }
 
 interface DriverFormData {
@@ -105,19 +109,6 @@ export default function DriversPage() {
     }
   };
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <span
-        key={i}
-        className={`text-sm ${
-          i < rating ? "text-accent-500" : "text-dark-300"
-        }`}
-      >
-        ★
-      </span>
-    ));
-  };
-
   const resetForm = () => {
     setFormData({
       name: "",
@@ -145,12 +136,12 @@ export default function DriversPage() {
     // Validate passwords for new drivers
     if (!editingDriver) {
       if (formData.password.length < 6) {
-        alert('Password must be at least 6 characters long');
+        alert("Password must be at least 6 characters long");
         return;
       }
 
       if (formData.password !== formData.confirmPassword) {
-        alert('Passwords do not match');
+        alert("Passwords do not match");
         return;
       }
     }
@@ -178,15 +169,15 @@ export default function DriversPage() {
         // If creating a new driver, also create a user account
         if (!editingDriver) {
           try {
-            await AuthService.post('/auth/create-user', {
+            await AuthService.post("/auth/create-user", {
               email: formData.email,
               password: formData.password,
               name: formData.name,
-              role: 'driver',
+              role: "driver",
               phone: formData.phone,
             });
           } catch (userError) {
-            console.error('Error creating user account:', userError);
+            console.error("Error creating user account:", userError);
             // Driver created but user creation failed - still show success
           }
         }
@@ -229,11 +220,7 @@ export default function DriversPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <motion.div
-          className="card"
-          whileHover={{ y: -5 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
+        <div className="card">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-dark-600">Total Drivers</p>
@@ -245,13 +232,9 @@ export default function DriversPage() {
               <User className="w-6 h-6 text-primary-600" />
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          className="card"
-          whileHover={{ y: -5 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
+        <div className="card">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-dark-600">
@@ -265,36 +248,31 @@ export default function DriversPage() {
               <CheckCircle className="w-6 h-6 text-secondary-600" />
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          className="card"
-          whileHover={{ y: -5 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
+        <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-dark-600">Avg. Rating</p>
+              <p className="text-sm font-medium text-dark-600">
+                Avg. Experience
+              </p>
               <p className="text-2xl font-bold text-dark-900">
                 {drivers.length > 0
                   ? (
-                      drivers.reduce((sum, d) => sum + d.rating, 0) /
+                      drivers.reduce((sum, d) => sum + d.experience_years, 0) /
                       drivers.length
                     ).toFixed(1)
-                  : "0.0"}
+                  : "0.0"}{" "}
+                yrs
               </p>
             </div>
-            <div className="w-12 h-12 bg-accent-100 rounded-lg flex items-center justify-center">
-              <Star className="w-6 h-6 text-accent-600" />
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-blue-600" />
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          className="card"
-          whileHover={{ y: -5 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
+        <div className="card">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-dark-600">Total Trips</p>
@@ -306,16 +284,11 @@ export default function DriversPage() {
               <User className="w-6 h-6 text-primary-600" />
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* Filters and Search */}
-      <motion.div
-        className="card mb-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
+      <div className="card mb-8">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
@@ -349,7 +322,7 @@ export default function DriversPage() {
             Add Driver
           </button>
         </div>
-      </motion.div>
+      </div>
 
       {/* Drivers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto scrollbar-hide">
@@ -377,13 +350,9 @@ export default function DriversPage() {
           </div>
         ) : (
           filteredDrivers.map((driver, index) => (
-            <motion.div
+            <div
               key={driver.id}
               className="card hover:shadow-medium transition-all duration-200"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 + index * 0.1 }}
-              whileHover={{ y: -5 }}
             >
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
@@ -438,11 +407,10 @@ export default function DriversPage() {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <p className="text-xs text-dark-500">Rating</p>
+                  <p className="text-xs text-dark-500">Vehicle Owner</p>
                   <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 text-accent-500 fill-current" />
                     <span className="font-semibold text-dark-800">
-                      {driver.rating || 0}
+                      {driver.vehicle_owner?.name || "Not Assigned"}
                     </span>
                   </div>
                 </div>
@@ -464,393 +432,392 @@ export default function DriversPage() {
                   Edit
                 </button>
               </div>
-            </motion.div>
+            </div>
           ))
         )}
       </div>
 
       {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {showAddModal && (
-          <motion.div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div
+            ref={addModalRef}
+            className="bg-white rounded-xl shadow-large w-full max-w-md"
           >
-            <motion.div
-              ref={addModalRef}
-              className="bg-white rounded-xl shadow-large w-full max-w-md"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-dark-900">
+                  {editingDriver ? "Edit Driver" : "Add New Driver"}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowAddModal(false);
+                    resetForm();
+                  }}
+                  className="text-dark-400 hover:text-dark-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <form
+              onSubmit={handleSubmit}
+              className="p-6 space-y-4 max-h-[60vh] overflow-y-auto scrollbar-hide"
             >
-              <div className="p-6 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-dark-900">
-                    {editingDriver ? "Edit Driver" : "Add New Driver"}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowAddModal(false);
-                      resetForm();
-                    }}
-                    className="text-dark-400 hover:text-dark-600"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-700 mb-2">
+                  Driver Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="input-field"
+                  placeholder="Enter driver name"
+                  required
+                />
               </div>
 
-              <form
-                onSubmit={handleSubmit}
-                className="p-6 space-y-4 max-h-[60vh] overflow-y-auto scrollbar-hide"
-              >
-                <div>
-                  <label className="block text-sm font-medium text-dark-700 mb-2">
-                    Driver Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="input-field"
-                    placeholder="Enter driver name"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  className="input-field"
+                  placeholder="Enter email address"
+                  required
+                />
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-700 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="input-field"
-                    placeholder="Enter email address"
-                    required
-                  />
-                </div>
-
-                {/* Password fields - only show for new drivers */}
-                {!editingDriver && (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium text-dark-700 mb-2 flex items-center">
-                        <Lock className="h-4 w-4 mr-1" />
-                        Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="password"
-                          value={formData.password}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              password: e.target.value,
-                            })
-                          }
-                          className="input-field pr-10"
-                          placeholder="Enter password (min 6 characters)"
-                          required
-                        />
-                        <button
-                          type="button"
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                      </div>
+              {/* Password fields - only show for new drivers */}
+              {!editingDriver && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-dark-700 mb-2 flex items-center">
+                      <Lock className="h-4 w-4 mr-1" />
+                      Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            password: e.target.value,
+                          })
+                        }
+                        className="input-field pr-10"
+                        placeholder="Enter password (min 6 characters)"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-dark-700 mb-2 flex items-center">
-                        <Lock className="h-4 w-4 mr-1" />
-                        Confirm Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="password"
-                          value={formData.confirmPassword}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              confirmPassword: e.target.value,
-                            })
-                          }
-                          className="input-field pr-10"
-                          placeholder="Confirm password"
-                          required
-                        />
-                        <button
-                          type="button"
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                      </div>
+                  <div>
+                    <label className="text-sm font-medium text-dark-700 mb-2 flex items-center">
+                      <Lock className="h-4 w-4 mr-1" />
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={formData.confirmPassword}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            confirmPassword: e.target.value,
+                          })
+                        }
+                        className="input-field pr-10"
+                        placeholder="Confirm password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                     </div>
+                  </div>
 
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-blue-600" />
-                        <p className="text-sm font-medium text-blue-800">Driver Account</p>
-                      </div>
-                      <p className="text-xs text-blue-600 mt-1">
-                        A driver account will be created with the provided email and password for login access.
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-blue-600" />
+                      <p className="text-sm font-medium text-blue-800">
+                        Driver Account
                       </p>
                     </div>
-                  </>
-                )}
+                    <p className="text-xs text-blue-600 mt-1">
+                      A driver account will be created with the provided email
+                      and password for login access. Use client
+                    </p>
+                  </div>
+                </>
+              )}
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-700 mb-2">
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    className="input-field"
-                    placeholder="Enter phone number"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-700 mb-2">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
+                  className="input-field"
+                  placeholder="Enter phone number"
+                  required
+                />
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-700 mb-2">
-                    License Number
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.license_number}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        license_number: e.target.value,
-                      })
-                    }
-                    className="input-field"
-                    placeholder="Enter license number"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-700 mb-2">
+                  License Number
+                </label>
+                <input
+                  type="text"
+                  value={formData.license_number}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      license_number: e.target.value,
+                    })
+                  }
+                  className="input-field"
+                  placeholder="Enter license number"
+                  required
+                />
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-700 mb-2">
-                    Experience (years)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.experience_years}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        experience_years: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="input-field"
-                    placeholder="Enter years of experience"
-                    min="0"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-700 mb-2">
+                  Experience (years)
+                </label>
+                <input
+                  type="number"
+                  value={formData.experience_years}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      experience_years: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  className="input-field"
+                  placeholder="Enter years of experience"
+                  min="0"
+                  required
+                />
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-700 mb-2">
-                    Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        status: e.target.value as
-                          | "active"
-                          | "inactive"
-                          | "suspended",
-                      })
-                    }
-                    className="input-field"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      status: e.target.value as
+                        | "active"
+                        | "inactive"
+                        | "suspended",
+                    })
+                  }
+                  className="input-field"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
 
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddModal(false);
-                      resetForm();
-                    }}
-                    className="flex-1 btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="flex-1 btn-primary">
-                    {editingDriver ? "Update" : "Add"} Driver
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    resetForm();
+                  }}
+                  className="flex-1 btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="flex-1 btn-primary">
+                  {editingDriver ? "Update" : "Add"} Driver
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* View Modal */}
-      <AnimatePresence>
-        {showViewModal && viewingDriver && (
-          <motion.div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowViewModal(false)}
+      {showViewModal && viewingDriver && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowViewModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-large w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              className="bg-white rounded-xl shadow-large w-full max-w-lg"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-6 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-dark-900">
-                    Driver Details
-                  </h3>
-                  <button
-                    onClick={() => setShowViewModal(false)}
-                    className="text-dark-400 hover:text-dark-600"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-dark-900">
+                  Driver Details
+                </h3>
+                <button
+                  onClick={() => setShowViewModal(false)}
+                  className="text-dark-400 hover:text-dark-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
+            </div>
 
-              <div className="p-6 max-h-[70vh] overflow-y-auto scrollbar-hide">
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                      {viewingDriver.name
-                        ?.split(" ")
-                        .map((n: string) => n[0])
-                        .join("") || "N/A"}
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-bold text-dark-900">
-                        {viewingDriver.name || "N/A"}
-                      </h4>
-                      <p className="text-dark-600">
-                        {viewingDriver.email || "N/A"}
-                      </p>
-                    </div>
-                    <span
-                      className={`status-badge ${getStatusColor(
-                        viewingDriver.status
-                      )} ml-auto`}
-                    >
-                      {viewingDriver.status?.toUpperCase() || "N/A"}
-                    </span>
+            <div className="p-6 max-h-[70vh] overflow-y-auto scrollbar-hide">
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    {viewingDriver.name
+                      ?.split(" ")
+                      .map((n: string) => n[0])
+                      .join("") || "N/A"}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-dark-700 mb-1">
-                          Phone
-                        </label>
-                        <p className="text-dark-900">
-                          {viewingDriver.phone || "N/A"}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-dark-700 mb-1">
-                          License Number
-                        </label>
-                        <p className="text-dark-900">
-                          {viewingDriver.license_number || "N/A"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-dark-700 mb-1">
-                          Experience
-                        </label>
-                        <p className="text-dark-900">
-                          {viewingDriver.experience_years || 0} years
-                        </p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-dark-700 mb-1">
-                          Driver ID
-                        </label>
-                        <p className="text-dark-900">#{viewingDriver.id}</p>
-                      </div>
-                    </div>
+                  <div>
+                    <h4 className="text-xl font-bold text-dark-900">
+                      {viewingDriver.name || "N/A"}
+                    </h4>
+                    <p className="text-dark-600">
+                      {viewingDriver.email || "N/A"}
+                    </p>
                   </div>
+                  <span
+                    className={`status-badge ${getStatusColor(
+                      viewingDriver.status
+                    )} ml-auto`}
+                  >
+                    {viewingDriver.status?.toUpperCase() || "N/A"}
+                  </span>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-dark-700 mb-1">
-                        Total Trips
+                        Phone
                       </label>
                       <p className="text-dark-900">
-                        {viewingDriver.total_trips || 0}
+                        {viewingDriver.phone || "N/A"}
                       </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-dark-700 mb-1">
-                        Completed Trips
+                        License Number
                       </label>
-                      <p className="text-secondary-600 font-medium">
-                        {viewingDriver.completed_trips || 0}
+                      <p className="text-dark-900">
+                        {viewingDriver.license_number || "N/A"}
                       </p>
                     </div>
                   </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-dark-700 mb-1">
+                        Experience
+                      </label>
+                      <p className="text-dark-900">
+                        {viewingDriver.experience_years || 0} years
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-dark-700 mb-1">
+                        Driver ID
+                      </label>
+                      <p className="text-dark-900">#{viewingDriver.id}</p>
+                    </div>
+                  </div>
+                </div>
 
-                  <div className="pt-4 border-t border-gray-100">
-                    <p className="text-xs text-dark-500">
-                      Joined:{" "}
-                      {new Date(viewingDriver.created_at).toLocaleDateString()}
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-dark-700 mb-1">
+                      Total Trips
+                    </label>
+                    <p className="text-dark-900">
+                      {viewingDriver.total_trips || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-dark-700 mb-1">
+                      Completed Trips
+                    </label>
+                    <p className="text-secondary-600 font-medium">
+                      {viewingDriver.completed_trips || 0}
                     </p>
                   </div>
                 </div>
-              </div>
 
-              <div className="p-6 border-t border-gray-100 flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowViewModal(false);
-                    handleEdit(viewingDriver);
-                  }}
-                  className="flex-1 btn-primary"
-                >
-                  Edit Driver
-                </button>
-                <button
-                  onClick={() => setShowViewModal(false)}
-                  className="flex-1 btn-secondary"
-                >
-                  Close
-                </button>
+                <div>
+                  <label className="block text-sm font-medium text-dark-700 mb-1">
+                    Vehicle Owner
+                  </label>
+                  <p className="text-dark-900">
+                    {viewingDriver.vehicle_owner?.name || "Not Assigned"}
+                  </p>
+                  {viewingDriver.vehicle_owner && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {viewingDriver.vehicle_owner.email}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-gray-100">
+                  <p className="text-xs text-dark-500">
+                    Joined:{" "}
+                    {new Date(viewingDriver.created_at).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+
+            <div className="p-6 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowViewModal(false);
+                  handleEdit(viewingDriver);
+                }}
+                className="flex-1 btn-primary"
+              >
+                Edit Driver
+              </button>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="flex-1 btn-secondary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

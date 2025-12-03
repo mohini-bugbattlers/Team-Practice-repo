@@ -16,6 +16,8 @@ import {
 import { Users, Truck, FileText, DollarSign, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import AuthService from "@/services/auth";
+import { socketService } from "@/services/socket";
+import { toast } from "react-hot-toast";
 
 interface DashboardStats {
   totalTrips: number;
@@ -60,6 +62,98 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardStats();
+
+    // Set up real-time updates
+    if (AuthService.isAuthenticated()) {
+      socketService.connect("1");
+
+      // Listen for trip updates
+      socketService.onTripUpdate((tripData: any) => {
+        setStats((prev) => ({
+          ...prev,
+          totalTrips: prev.totalTrips + 1,
+          activeTrips:
+            tripData.status === "in_transit"
+              ? prev.activeTrips + 1
+              : prev.activeTrips,
+          completedTrips:
+            tripData.status === "completed"
+              ? prev.completedTrips + 1
+              : prev.completedTrips,
+          totalRevenue:
+            tripData.status === "completed"
+              ? prev.totalRevenue + (tripData.totalCost || 0)
+              : prev.totalRevenue,
+        }));
+
+        // Show toast notification
+        if (tripData.status === "completed") {
+          toast.success(
+            `Trip #${tripData.id} completed! Revenue: ₹${
+              tripData.totalCost || 0
+            }`
+          );
+        } else if (tripData.status === "in_transit") {
+          toast(`Trip #${tripData.id} is now in transit`, {
+            icon: "🚚",
+          });
+        }
+      });
+
+      // Listen for new user registrations
+      socketService.onUserUpdate((userData: any) => {
+        setStats((prev) => ({
+          ...prev,
+          totalDrivers:
+            userData.role === "driver"
+              ? prev.totalDrivers + 1
+              : prev.totalDrivers,
+          totalVehicleOwners:
+            userData.role === "vehicle_owner"
+              ? prev.totalVehicleOwners + 1
+              : prev.totalVehicleOwners,
+          totalManagers:
+            userData.role === "manager"
+              ? prev.totalManagers + 1
+              : prev.totalManagers,
+        }));
+
+        // Show toast notification
+        toast.success(
+          `New ${userData.role.replace("_", " ")} registered: ${
+            userData.name || userData.email
+          }`
+        );
+      });
+    }
+
+    // Simulate some real-time updates for demo
+    const simulateUpdates = () => {
+      // Simulate trip completion
+      setTimeout(() => {
+        socketService.simulateTripUpdate({
+          id: Math.floor(Math.random() * 1000),
+          status: "completed",
+          totalCost: Math.floor(Math.random() * 5000) + 1000,
+        });
+      }, 2000);
+
+      // Simulate new driver
+      setTimeout(() => {
+        socketService.simulateUserUpdate({
+          role: "driver",
+          name: "John Doe",
+          email: "john@example.com",
+        });
+      }, 4000);
+    };
+
+    // Start simulation after 3 seconds
+    setTimeout(simulateUpdates, 3000);
+
+    return () => {
+      socketService.disconnect();
+    };
   }, []);
 
   const fetchDashboardStats = async () => {

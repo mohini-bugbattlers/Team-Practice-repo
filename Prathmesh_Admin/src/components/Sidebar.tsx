@@ -11,6 +11,7 @@ import {
   FileText,
   CreditCard,
   BarChart3,
+  User,
   Settings,
   LogOut,
   Menu,
@@ -24,7 +25,7 @@ const navigation = [
   { name: "Managers", href: "/managers", icon: UserCheck },
   { name: "Trips", href: "/trips", icon: FileText },
   { name: "Payments", href: "/payments", icon: CreditCard },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Profile", href: "/profile", icon: User },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -53,9 +54,13 @@ export default function Sidebar() {
                   href={item.href}
                   className={`sidebar-link group ${isActive ? "active" : ""}`}
                 >
-                  <item.icon className={`mr-3 h-5 w-5 transition-colors duration-200 ${
-                    isActive ? "text-white" : "text-dark-600 group-hover:text-primary-600"
-                  }`} />
+                  <item.icon
+                    className={`mr-3 h-5 w-5 transition-colors duration-200 ${
+                      isActive
+                        ? "text-white"
+                        : "text-dark-600 group-hover:text-primary-600"
+                    }`}
+                  />
                   <span className="font-medium">{item.name}</span>
                 </Link>
               );

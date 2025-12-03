@@ -31,17 +31,35 @@ export class DriverService {
       const offset = (page - 1) * limit;
 
       const [rows] = await db.execute(`
-        SELECT * FROM drivers
-        ORDER BY ${sortBy} ${sortOrder}
+        SELECT 
+          d.*,
+          vo.id as vehicle_owner_id,
+          vo.name as vehicle_owner_name,
+          vo.email as vehicle_owner_email,
+          vo.phone as vehicle_owner_phone
+        FROM drivers d
+        LEFT JOIN vehicle_owners vo ON d.vehicle_owner_id = vo.id
+        ORDER BY d.${sortBy} ${sortOrder}
         LIMIT ? OFFSET ?
       `, [limit, offset]);
 
       const [countRows] = await db.execute('SELECT COUNT(*) as total FROM drivers');
       const total = (countRows as any[])[0].total;
 
+      // Format the response to include vehicle_owner as nested object
+      const formattedRows = (rows as any[]).map(row => ({
+        ...row,
+        vehicle_owner: row.vehicle_owner_id ? {
+          id: row.vehicle_owner_id,
+          name: row.vehicle_owner_name,
+          email: row.vehicle_owner_email,
+          phone: row.vehicle_owner_phone
+        } : null
+      }));
+
       return {
         success: true,
-        data: rows as DriverData[],
+        data: formattedRows as DriverData[],
         message: `Found ${total} drivers`
       };
     } catch (error) {
@@ -55,9 +73,19 @@ export class DriverService {
 
   async getDriverById(id: number): Promise<ServiceResponse<DriverData>> {
     try {
-      const [rows] = await db.execute('SELECT * FROM drivers WHERE id = ?', [id]);
+      const [rows] = await db.execute(`
+        SELECT 
+          d.*,
+          vo.id as vehicle_owner_id,
+          vo.name as vehicle_owner_name,
+          vo.email as vehicle_owner_email,
+          vo.phone as vehicle_owner_phone
+        FROM drivers d
+        LEFT JOIN vehicle_owners vo ON d.vehicle_owner_id = vo.id
+        WHERE d.id = ?
+      `, [id]);
 
-      const drivers = rows as DriverData[];
+      const drivers = rows as any[];
       if (drivers.length === 0) {
         return {
           success: false,
@@ -65,9 +93,21 @@ export class DriverService {
         };
       }
 
+      // Format the response to include vehicle_owner as nested object
+      const driver = drivers[0];
+      const formattedDriver = {
+        ...driver,
+        vehicle_owner: driver.vehicle_owner_id ? {
+          id: driver.vehicle_owner_id,
+          name: driver.vehicle_owner_name,
+          email: driver.vehicle_owner_email,
+          phone: driver.vehicle_owner_phone
+        } : null
+      };
+
       return {
         success: true,
-        data: drivers[0],
+        data: formattedDriver,
         message: 'Driver found successfully'
       };
     } catch (error) {

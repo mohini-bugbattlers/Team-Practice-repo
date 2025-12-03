@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Bell, Search, User, Menu, Settings, LogOut, ChevronDown } from "lucide-react";
+import {
+  Bell,
+  Search,
+  User,
+  Menu,
+  Settings,
+  LogOut,
+  ChevronDown,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { socketService } from "@/services/socket";
 import AuthService from "@/services/auth";
@@ -10,7 +18,7 @@ interface Notification {
   id: number;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: "info" | "success" | "warning" | "error";
   timestamp: string;
   read: boolean;
 }
@@ -19,7 +27,7 @@ export default function Header() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -33,11 +41,11 @@ export default function Header() {
   useEffect(() => {
     // Only initialize socket connection if user is authenticated
     if (AuthService.isAuthenticated()) {
-      socketService.connect('1');
+      socketService.connect("1");
 
       // Listen for real-time notifications
       socketService.onNotification((notification: Notification) => {
-        setNotifications(prev => [notification, ...prev.slice(0, 9)]); // Keep only latest 10
+        setNotifications((prev) => [notification, ...prev.slice(0, 9)]); // Keep only latest 10
       });
 
       // Simulate some initial notifications
@@ -48,6 +56,54 @@ export default function Header() {
           "success"
         );
       }, 1000);
+
+      // Simulate periodic notifications for demo
+      const notificationInterval = setInterval(() => {
+        const notifications = [
+          {
+            title: "New Trip Created",
+            message: "Trip #1234 has been created",
+            type: "info",
+          },
+          {
+            title: "Trip Completed",
+            message: "Trip #1232 completed successfully",
+            type: "success",
+          },
+          {
+            title: "Payment Received",
+            message: "Payment of ₹2,500 received",
+            type: "success",
+          },
+          {
+            title: "Driver Assigned",
+            message: "Driver John Doe assigned to trip",
+            type: "info",
+          },
+          {
+            title: "Vehicle Owner Registered",
+            message: "New vehicle owner registered",
+            type: "info",
+          },
+          {
+            title: "System Update",
+            message: "System maintenance scheduled",
+            type: "warning",
+          },
+        ];
+
+        const randomNotification =
+          notifications[Math.floor(Math.random() * notifications.length)];
+        socketService.simulateNotification(
+          randomNotification.title,
+          randomNotification.message,
+          randomNotification.type as any
+        );
+      }, 15000); // Every 15 seconds
+
+      return () => {
+        clearInterval(notificationInterval);
+      };
     }
 
     return () => {
@@ -60,52 +116,78 @@ export default function Header() {
     if (!isAuthenticated) return;
 
     function handleClickOutside(event: MouseEvent) {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
         setShowProfileDropdown(false);
       }
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
         setShowNotifications(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isAuthenticated]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleProfileClick = () => {
-    router.push('/profile');
+    router.push("/profile");
     setShowProfileDropdown(false);
   };
 
   const handleSettingsClick = () => {
-    router.push('/settings');
+    router.push("/settings");
     setShowProfileDropdown(false);
   };
 
   const handleSignOut = () => {
     AuthService.logout();
     socketService.disconnect();
-    router.push('/login');
+    router.push("/login");
     setShowProfileDropdown(false);
+  };
+
+  const handleViewAllNotifications = () => {
+    // Mark all notifications as read
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setShowNotifications(false);
+    // Navigate to notifications page or show modal
+    // For now, just show an alert
+    alert(
+      "All notifications marked as read. In a full implementation, this would navigate to a dedicated notifications page."
+    );
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark notification as read
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+    );
   };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) {
-      alert('Please enter a search term');
+      alert("Please enter a search term");
       return;
     }
 
     try {
       // For demo purposes, simulate search functionality
-      alert('Search functionality implemented! In a full implementation, this would search across trips, companies, drivers, vehicle owners, and payments. Backend search endpoints would need to be added for full functionality.');
+      alert(
+        "Search functionality implemented! In a full implementation, this would search across trips, companies, drivers, vehicle owners, and payments. Backend search endpoints would need to be added for full functionality."
+      );
     } catch (error) {
-      console.error('Search error:', error);
-      alert('Search failed. Please try again.');
+      console.error("Search error:", error);
+      alert("Search failed. Please try again.");
     }
   };
 
@@ -155,7 +237,7 @@ export default function Header() {
                   <Bell className="h-6 w-6" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                      {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
                 </button>
@@ -164,7 +246,9 @@ export default function Header() {
                 {showNotifications && (
                   <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-large border border-gray-100 z-50">
                     <div className="p-4 border-b border-gray-100">
-                      <h3 className="text-lg font-semibold text-dark-900">Notifications</h3>
+                      <h3 className="text-lg font-semibold text-dark-900">
+                        Notifications
+                      </h3>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.length === 0 ? (
@@ -173,17 +257,36 @@ export default function Header() {
                         </div>
                       ) : (
                         notifications.map((notification) => (
-                          <div key={notification.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer">
+                          <div
+                            key={notification.id}
+                            className={`p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer ${
+                              !notification.read ? "bg-blue-50" : ""
+                            }`}
+                            onClick={() =>
+                              handleNotificationClick(notification)
+                            }
+                          >
                             <div className="flex items-start gap-3">
-                              <div className={`w-2 h-2 rounded-full mt-2 ${
-                                notification.type === 'success' ? 'bg-secondary-500' :
-                                notification.type === 'error' ? 'bg-red-500' : 'bg-primary-500'
-                              }`} />
+                              <div
+                                className={`w-2 h-2 rounded-full mt-2 ${
+                                  notification.type === "success"
+                                    ? "bg-secondary-500"
+                                    : notification.type === "error"
+                                    ? "bg-red-500"
+                                    : "bg-primary-500"
+                                }`}
+                              />
                               <div className="flex-1">
-                                <p className="text-sm font-medium text-dark-900">{notification.title}</p>
-                                <p className="text-xs text-dark-600 mt-1">{notification.message}</p>
+                                <p className="text-sm font-medium text-dark-900">
+                                  {notification.title}
+                                </p>
+                                <p className="text-xs text-dark-600 mt-1">
+                                  {notification.message}
+                                </p>
                                 <p className="text-xs text-dark-400 mt-2">
-                                  {new Date(notification.timestamp).toLocaleTimeString()}
+                                  {new Date(
+                                    notification.timestamp
+                                  ).toLocaleTimeString()}
                                 </p>
                               </div>
                             </div>
@@ -192,7 +295,10 @@ export default function Header() {
                       )}
                     </div>
                     <div className="p-3 border-t border-gray-100">
-                      <button className="w-full text-center text-sm text-primary-600 hover:text-primary-800 font-medium">
+                      <button
+                        onClick={handleViewAllNotifications}
+                        className="w-full text-center text-sm text-primary-600 hover:text-primary-800 font-medium"
+                      >
                         View all notifications
                       </button>
                     </div>
@@ -216,7 +322,9 @@ export default function Header() {
                     <ChevronDown className="ml-1 h-4 w-4 text-dark-400" />
                   </button>
                   <div className="ml-3 hidden md:block">
-                    <p className="text-sm font-medium text-dark-800">Admin User</p>
+                    <p className="text-sm font-medium text-dark-800">
+                      Admin User
+                    </p>
                     <p className="text-xs text-dark-500">Administrator</p>
                   </div>
                 </div>
@@ -225,8 +333,12 @@ export default function Header() {
                 {showProfileDropdown && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-large border border-gray-100 z-50">
                     <div className="p-4 border-b border-gray-100">
-                      <p className="text-sm font-medium text-dark-900">Admin User</p>
-                      <p className="text-xs text-dark-500">admin@prathmesh.com</p>
+                      <p className="text-sm font-medium text-dark-900">
+                        Admin User
+                      </p>
+                      <p className="text-xs text-dark-500">
+                        admin@prathmesh.com
+                      </p>
                     </div>
                     <div className="py-1">
                       <button

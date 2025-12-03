@@ -13,6 +13,16 @@ interface VehicleOwnerData {
   status: 'active' | 'inactive';
   created_at?: Date;
   updated_at?: Date;
+  driver_count?: number;
+  drivers?: Array<{
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    license_number: string;
+    experience_years: number;
+    status: string;
+  }>;
 }
 
 export class VehicleOwnerService {
@@ -28,17 +38,56 @@ export class VehicleOwnerService {
       const offset = (page - 1) * limit;
 
       const [rows] = await db.execute(`
-        SELECT * FROM vehicle_owners
-        ORDER BY ${sortBy} ${sortOrder}
+        SELECT 
+          vo.*,
+          COUNT(d.id) as driver_count,
+          GROUP_CONCAT(
+            CONCAT(
+              d.id, ':', d.name, ':', d.email, ':', d.phone, ':', 
+              d.license_number, ':', d.experience_years, ':', d.status
+            ) SEPARATOR '|'
+          ) as drivers_info
+        FROM vehicle_owners vo
+        LEFT JOIN drivers d ON vo.id = d.vehicle_owner_id
+        GROUP BY vo.id
+        ORDER BY vo.${sortBy} ${sortOrder}
         LIMIT ? OFFSET ?
       `, [limit, offset]);
 
       const [countRows] = await db.execute('SELECT COUNT(*) as total FROM vehicle_owners');
       const total = (countRows as any[])[0].total;
 
+      // Format the response to include drivers as nested array
+      const formattedRows = (rows as any[]).map(row => {
+        const drivers = [];
+        if (row.drivers_info) {
+          const driverStrings = row.drivers_info.split('|');
+          for (const driverString of driverStrings) {
+            const [id, name, email, phone, license_number, experience_years, status] = driverString.split(':');
+            if (id) {
+              drivers.push({
+                id: parseInt(id),
+                name,
+                email,
+                phone,
+                license_number,
+                experience_years: parseInt(experience_years),
+                status
+              });
+            }
+          }
+        }
+
+        return {
+          ...row,
+          driver_count: row.driver_count || 0,
+          drivers: drivers
+        };
+      });
+
       return {
         success: true,
-        data: rows as VehicleOwnerData[],
+        data: formattedRows as VehicleOwnerData[],
         message: `Found ${total} vehicle owners`
       };
     } catch (error) {
@@ -52,9 +101,23 @@ export class VehicleOwnerService {
 
   async getVehicleOwnerById(id: number): Promise<ServiceResponse<VehicleOwnerData>> {
     try {
-      const [rows] = await db.execute('SELECT * FROM vehicle_owners WHERE id = ?', [id]);
+      const [rows] = await db.execute(`
+        SELECT 
+          vo.*,
+          COUNT(d.id) as driver_count,
+          GROUP_CONCAT(
+            CONCAT(
+              d.id, ':', d.name, ':', d.email, ':', d.phone, ':', 
+              d.license_number, ':', d.experience_years, ':', d.status
+            ) SEPARATOR '|'
+          ) as drivers_info
+        FROM vehicle_owners vo
+        LEFT JOIN drivers d ON vo.id = d.vehicle_owner_id
+        WHERE vo.id = ?
+        GROUP BY vo.id
+      `, [id]);
 
-      const owners = rows as VehicleOwnerData[];
+      const owners = rows as any[];
       if (owners.length === 0) {
         return {
           success: false,
@@ -62,9 +125,36 @@ export class VehicleOwnerService {
         };
       }
 
+      // Format the response to include drivers as nested array
+      const owner = owners[0];
+      const drivers = [];
+      if (owner.drivers_info) {
+        const driverStrings = owner.drivers_info.split('|');
+        for (const driverString of driverStrings) {
+          const [id, name, email, phone, license_number, experience_years, status] = driverString.split(':');
+          if (id) {
+            drivers.push({
+              id: parseInt(id),
+              name,
+              email,
+              phone,
+              license_number,
+              experience_years: parseInt(experience_years),
+              status
+            });
+          }
+        }
+      }
+
+      const formattedOwner = {
+        ...owner,
+        driver_count: owner.driver_count || 0,
+        drivers: drivers
+      };
+
       return {
         success: true,
-        data: owners[0],
+        data: formattedOwner,
         message: 'Vehicle owner found successfully'
       };
     } catch (error) {
