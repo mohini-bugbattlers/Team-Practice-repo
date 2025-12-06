@@ -161,6 +161,131 @@ export interface TripQuery extends PaginationQuery {
   endDate?: Date;
 }
 
+// Blog interfaces
+export interface IBlog {
+  id?: number;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  image: string;
+  author: string;
+  publishDate: Date;
+  readTime: string;
+  categories: string[];
+  tags: string[];
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export interface IBlogCategory {
+  id?: number;
+  name: string;
+  slug: string;
+  description?: string;
+  postCount?: number;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export interface IBlogTag {
+  id?: number;
+  name: string;
+  slug: string;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export interface BlogQuery extends PaginationQuery {
+  category?: string;
+  tag?: string;
+  search?: string;
+}
+
+export interface BlogResponse {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  image: string;
+  author: string | {
+    name: string;
+    avatar?: string;
+  };
+  publishDate: string;
+  readTime: string;
+  categories: string[] | Array<{
+    id: number;
+    name: string;
+    slug: string;
+  }>;
+  tags: string[] | Array<{
+    id: number;
+    name: string;
+    slug: string;
+  }>;
+}
+
+export interface BlogDetailResponse extends BlogResponse {
+  author: {
+    name: string;
+    avatar?: string;
+  };
+  categories: Array<{
+    id: number;
+    name: string;
+    slug: string;
+  }>;
+  tags: Array<{
+    id: number;
+    name: string;
+    slug: string;
+  }>;
+  relatedPosts?: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    excerpt: string;
+    image: string;
+    publishDate: string;
+    readTime: string;
+  }>;
+}
+
+// Quote interfaces
+export interface IQuote {
+  id?: number;
+  name: string;
+  email: string;
+  phone: string;
+  company?: string;
+  from_location: string;
+  to_location: string;
+  product_type: string;
+  quantity: number;
+  unit: string;
+  message?: string;
+  preferred_contact_method?: string;
+  status: 'pending' | 'contacted' | 'quoted' | 'closed';
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export interface CreateQuoteRequest {
+  name: string;
+  email: string;
+  phone: string;
+  company?: string;
+  from_location: string;
+  to_location: string;
+  product_type: string;
+  quantity: number;
+  unit: string;
+  message?: string;
+  preferred_contact_method?: string;
+}
+
 // Service response interfaces
 export interface ServiceResponse<T = any> {
   success: boolean;

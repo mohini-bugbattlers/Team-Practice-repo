@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
+import path from 'path';
 import { initializeDatabase } from './src/config/mysql';
 import authRoutes from './src/routes/auth';
 import companyRoutes from './src/routes/companies';
@@ -19,6 +20,8 @@ import reportRoutes from './src/routes/reports';
 import profileRoutes from './src/routes/profile';
 import settingsRoutes from  './src/routes/settings'
 import companyDashboardRoutes from './src/routes/company';
+import blogRoutes from './src/routes/blogRoutes';
+import quoteRoutes from './src/routes/quoteRoutes';
 import { authenticateToken, requireRole } from './src/middleware/auth';
 
 console.log('🚀 Starting Prathmesh Roadlines Backend...');
@@ -94,6 +97,9 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Initialize database
 console.log('🔧 Initializing database connection...');
 initializeDatabase();
@@ -133,6 +139,16 @@ app.use('/api/documents', authenticateToken, requireRole(['admin']), documentRou
 app.use('/api/payments', authenticateToken, requireRole(['admin']), paymentRoutes);
 app.use('/api/reports', authenticateToken, requireRole(['admin']), reportRoutes);
 app.use('/api/settings', authenticateToken, settingsRoutes);
+
+// Public routes - no authentication required
+app.use('/api/blogs', blogRoutes);
+app.use('/api/quotes', quoteRoutes);
+
+// Admin-only blog management
+app.use('/api/admin/blogs', authenticateToken, requireRole(['admin']), blogRoutes);
+
+// Admin-only quote management
+app.use('/api/admin/quotes', authenticateToken, requireRole(['admin']), quoteRoutes);
 
 // Socket.IO endpoint for real-time notifications
 app.post('/api/notifications/broadcast', authenticateToken, (req: Request, res: Response) => {
