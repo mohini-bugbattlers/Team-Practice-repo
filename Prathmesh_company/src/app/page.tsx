@@ -15,12 +15,22 @@ import {
   FileText,
   Filter,
   Search,
+  Bell,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  BarChart3,
+  Users,
+  Car,
+  AlertTriangle,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import API_CONFIG from "@/services/config";
 import AuthService from "@/services/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import AnalyticsChart from "@/components/AnalyticsChart";
 
 interface Trip {
   id: number;
@@ -55,18 +65,23 @@ interface DashboardStats {
 }
 
 export default function CompanyDashboard() {
+  const {
+    metrics,
+    tripAnalytics,
+    paymentAnalytics,
+    notifications,
+    loading,
+    error,
+    refreshData,
+    markNotificationRead,
+    unreadCount,
+    connectionStatus,
+  } = useDashboardData();
+
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalRequests: 0,
-    activeRequests: 0,
-    completedRequests: 0,
-    totalSpent: 0,
-    pendingPayments: 0,
-    thisMonthSpent: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
@@ -83,30 +98,24 @@ export default function CompanyDashboard() {
       return;
     }
 
-    // Check if user is a company user
     if (user.role !== 'company') {
       router.push('/auth/login');
       return;
     }
 
     setIsAuthenticated(true);
-    fetchDashboardData();
+    fetchTrips();
   };
 
-  const fetchDashboardData = async () => {
+  const fetchTrips = async () => {
     try {
-      setLoading(true);
       const response = await AuthService.get('/company/trips');
       if (response.success) {
         setTrips(response.data);
-        calculateStats(response.data);
       }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      // Fallback to mock data if API fails
+      console.error('Error fetching trips:', error);
       loadMockData();
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -151,31 +160,6 @@ export default function CompanyDashboard() {
       },
     ];
     setTrips(mockTrips);
-    calculateStats(mockTrips);
-  };
-
-  const calculateStats = (tripsData: Trip[]) => {
-    const totalRequests = tripsData.length;
-    const activeRequests = tripsData.filter(t =>
-      ['confirmed', 'vehicle_assigned', 'driver_assigned', 'in_transit'].includes(t.status)
-    ).length;
-    const completedRequests = tripsData.filter(t => t.status === 'completed').length;
-    const totalSpent = tripsData
-      .filter(t => t.status === 'completed')
-      .reduce((sum, t) => sum + t.total_amount, 0);
-    const pendingPayments = tripsData
-      .filter(t => t.status === 'completed')
-      .reduce((sum, t) => sum + t.total_amount, 0);
-    const thisMonthSpent = totalSpent; // In real app, filter by current month
-
-    setStats({
-      totalRequests,
-      activeRequests,
-      completedRequests,
-      totalSpent,
-      pendingPayments,
-      thisMonthSpent,
-    });
   };
 
   const filteredTrips = trips.filter(trip => {
@@ -236,16 +220,108 @@ export default function CompanyDashboard() {
           <h1 className="text-3xl font-bold text-dark-800">Company Dashboard</h1>
           <p className="text-dark-600 mt-1">Manage your transport requests and track payments</p>
         </div>
-        <Link href="/request">
-          <motion.button
-            className="btn-primary flex items-center"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Transport Request
-          </motion.button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center px-3 py-1 rounded-full text-sm ${
+              connectionStatus === 'connected' 
+                ? 'bg-green-100 text-green-800' 
+                : connectionStatus === 'connecting'
+                ? 'bg-yellow-100 text-yellow-800'
+                : 'bg-red-100 text-red-800'
+            }`}>
+              {connectionStatus === 'connected' ? <Wifi className="h-3 w-3 mr-1" /> : <WifiOff className="h-3 w-3 mr-1" />}
+              {connectionStatus === 'connected' ? 'Live' : connectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+            </div>
+            <motion.button
+              onClick={refreshData}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <RefreshCw className={`h-4 w-4 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+            </motion.button>
+          </div>
+          
+          <div className="relative">
+            <motion.button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Bell className="h-5 w-5 text-gray-600" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </motion.button>
+            
+            <AnimatePresence>
+              {showNotifications && (
+                <motion.div
+                  className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                >
+                  <div className="p-4 border-b border-gray-200">
+                    <h3 className="font-semibold text-dark-800">Notifications</h3>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifications.slice(0, 5).map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
+                          !notification.read ? 'bg-blue-50' : ''
+                        }`}
+                        onClick={() => markNotificationRead(notification.id)}
+                      >
+                        <div className="flex items-start">
+                          <div className={`p-2 rounded-full mr-3 ${
+                            notification.type === 'success' ? 'bg-green-100' :
+                            notification.type === 'warning' ? 'bg-yellow-100' :
+                            notification.type === 'error' ? 'bg-red-100' : 'bg-blue-100'
+                          }`}>
+                            {notification.type === 'success' ? <CheckCircle className="h-4 w-4 text-green-600" /> :
+                             notification.type === 'warning' ? <AlertTriangle className="h-4 w-4 text-yellow-600" /> :
+                             notification.type === 'error' ? <AlertCircle className="h-4 w-4 text-red-600" /> :
+                             <Bell className="h-4 w-4 text-blue-600" />}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-dark-800 text-sm">{notification.title}</p>
+                            <p className="text-xs text-dark-600 mt-1">{notification.message}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(notification.createdAt).toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-3 border-t border-gray-200">
+                    <Link href="/notifications">
+                      <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                        View all notifications
+                      </button>
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <Link href="/request">
+            <motion.button
+              className="btn-primary flex items-center"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Transport Request
+            </motion.button>
+          </Link>
+        </div>
       </motion.div>
 
       {/* Stats Cards */}
@@ -262,11 +338,11 @@ export default function CompanyDashboard() {
             <div className="ml-4">
               <p className="text-sm font-medium text-dark-600">Total Requests</p>
               <p className="text-2xl font-bold text-dark-800 animate-fade-in">
-                {stats.totalRequests}
+                {metrics?.activeTrips || 0}
               </p>
               <p className="text-xs text-secondary-600 flex items-center mt-1">
                 <TrendingUp className="h-3 w-3 mr-1" />
-                All time
+                {metrics?.monthlyGrowth ? `+${metrics.monthlyGrowth}%` : 'All time'}
               </p>
             </div>
           </div>
@@ -282,9 +358,9 @@ export default function CompanyDashboard() {
               <Clock className="h-6 w-6 text-white" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-dark-600">Active Requests</p>
+              <p className="text-sm font-medium text-dark-600">Active Trips</p>
               <p className="text-2xl font-bold text-dark-800 animate-fade-in">
-                {stats.activeRequests}
+                {metrics?.activeTrips || 0}
               </p>
               <p className="text-xs text-primary-600 flex items-center mt-1">
                 <div className="w-2 h-2 bg-primary-500 rounded-full mr-2 animate-pulse"></div>
@@ -306,11 +382,11 @@ export default function CompanyDashboard() {
             <div className="ml-4">
               <p className="text-sm font-medium text-dark-600">Completed</p>
               <p className="text-2xl font-bold text-dark-800 animate-fade-in">
-                {stats.completedRequests}
+                {metrics?.completedTrips || 0}
               </p>
               <p className="text-xs text-secondary-600 flex items-center mt-1">
                 <TrendingUp className="h-3 w-3 mr-1" />
-                Successfully delivered
+                {metrics?.onTimeDeliveryRate ? `${metrics.onTimeDeliveryRate}% on-time` : 'Successfully delivered'}
               </p>
             </div>
           </div>
@@ -326,13 +402,82 @@ export default function CompanyDashboard() {
               <DollarSign className="h-6 w-6 text-white" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-dark-600">Total Spent</p>
+              <p className="text-sm font-medium text-dark-600">Total Revenue</p>
               <p className="text-2xl font-bold text-dark-800 animate-fade-in">
-                ₹{stats.totalSpent.toLocaleString()}
+                ₹{metrics?.totalRevenue?.toLocaleString() || 0}
               </p>
               <p className="text-xs text-primary-600 flex items-center mt-1">
                 <TrendingUp className="h-3 w-3 mr-1" />
                 All completed trips
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Additional Metrics Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <motion.div
+          className="card"
+          whileHover={{ y: -5 }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          <div className="flex items-center">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-medium">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-dark-600">Active Drivers</p>
+              <p className="text-2xl font-bold text-dark-800 animate-fade-in">
+                {metrics?.driverPerformance?.activeDrivers || 0}
+              </p>
+              <p className="text-xs text-secondary-600 flex items-center mt-1">
+                <Users className="h-3 w-3 mr-1" />
+                {metrics?.driverPerformance?.averageRating ? `Avg: ${metrics.driverPerformance.averageRating}★` : 'Total drivers'}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="card"
+          whileHover={{ y: -5 }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          <div className="flex items-center">
+            <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-medium">
+              <Car className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-dark-600">Fleet Utilization</p>
+              <p className="text-2xl font-bold text-dark-800 animate-fade-in">
+                {metrics?.fleetUtilization?.utilizationRate || 0}%
+              </p>
+              <p className="text-xs text-secondary-600 flex items-center mt-1">
+                <Car className="h-3 w-3 mr-1" />
+                {metrics?.fleetUtilization?.activeVehicles || 0} of {metrics?.fleetUtilization?.totalVehicles || 0} active
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="card"
+          whileHover={{ y: -5 }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          <div className="flex items-center">
+            <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-medium">
+              <BarChart3 className="h-6 w-6 text-white" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-dark-600">Avg Delivery Time</p>
+              <p className="text-2xl font-bold text-dark-800 animate-fade-in">
+                {metrics?.averageDeliveryTime || 0}h
+              </p>
+              <p className="text-xs text-secondary-600 flex items-center mt-1">
+                <Clock className="h-3 w-3 mr-1" />
+                Average trip duration
               </p>
             </div>
           </div>
@@ -438,6 +583,9 @@ export default function CompanyDashboard() {
           )}
         </div>
       </motion.div>
+
+      {/* Analytics Section */}
+      <AnalyticsChart period="month" />
 
       {/* Quick Actions */}
       <motion.div
