@@ -5,6 +5,7 @@ import {
   createBlogValidation, 
   updateBlogValidation 
 } from '../controllers/BlogController';
+import { uploadBlogImage, serveUploadedFile } from '../middleware/upload';
 import { validationResult } from 'express-validator';
 import { ApiResponse } from '../interfaces';
 
@@ -28,8 +29,21 @@ router.get('/categories/all', BlogController.getCategories);
 
 // Admin-only routes - require authentication
 // These will be protected in server.ts
-router.post('/', createBlogValidation, validateRequest, BlogController.createBlog);
-router.put('/:id', updateBlogValidation, validateRequest, BlogController.updateBlog);
+router.post('/', 
+  uploadBlogImage, 
+  createBlogValidation, 
+  validateRequest, 
+  BlogController.createBlog
+);
+
+router.put('/:id', 
+  uploadBlogImage, 
+  updateBlogValidation, 
+  validateRequest, 
+  BlogController.updateBlog
+);
 router.delete('/:id', BlogController.deleteBlog);
+
+
 
 export default router;

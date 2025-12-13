@@ -9,7 +9,7 @@ class AuthService {
     return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
   }
 
-  // Login user and store token
+
   static async login(email: string, password: string) {
     try {
       const response = await fetch(`${this.BASE_URL}/auth/login`, {

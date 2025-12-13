@@ -22,7 +22,9 @@ import settingsRoutes from  './src/routes/settings'
 import companyDashboardRoutes from './src/routes/company';
 import blogRoutes from './src/routes/blogRoutes';
 import quoteRoutes from './src/routes/quoteRoutes';
+import fileUploadRoutes from './src/routes/fileUpload';
 import { authenticateToken, requireRole } from './src/middleware/auth';
+import { BlogController } from './src/controllers/BlogController';
 
 console.log('🚀 Starting Prathmesh Roadlines Backend...');
 
@@ -106,21 +108,31 @@ initializeDatabase();
 
 // Routes
 console.log('🔗 Setting up API routes...');
+
+// File serving route - MUST be before other routes to avoid conflicts
+app.get('/api/files/*', BlogController.serveFile);
+
 app.use('/api/auth', authRoutes);
+
 // Protected routes - require authentication
 app.use('/api/companies', authenticateToken, companyRoutes);
 app.use('/api/vehicle-owners', authenticateToken, vehicleOwnerRoutes);
 app.use('/api/drivers', authenticateToken, driverRoutes);
 app.use('/api/managers', authenticateToken, managerRoutes);
 app.use('/api/profile',authenticateToken,profileRoutes)
+
 // Company dashboard routes
 app.use('/api/company', authenticateToken, companyDashboardRoutes);
+
 // Manager dashboard routes
 app.use('/api/manager', authenticateToken, requireRole(['manager']), managerDashboardRoutes);
+
 // Vehicle owner dashboard routes
 app.use('/api/vehicle-owner', authenticateToken, requireRole(['vehicle_owner']), vehicleOwnerDashboardRoutes);
+
 // Driver dashboard routes
 app.use('/api/driver', authenticateToken, requireRole(['driver']), driverDashboardRoutes);
+
 // Manager-only routes (limited permissions)
 app.use('/api/trips', authenticateToken, (req: any, res: any, next: any) => {
   // Managers can access trips
@@ -139,6 +151,9 @@ app.use('/api/documents', authenticateToken, requireRole(['admin']), documentRou
 app.use('/api/payments', authenticateToken, requireRole(['admin']), paymentRoutes);
 app.use('/api/reports', authenticateToken, requireRole(['admin']), reportRoutes);
 app.use('/api/settings', authenticateToken, settingsRoutes);
+
+// File upload endpoints (for uploading new files)
+app.use('/api/upload', fileUploadRoutes);
 
 // Public routes - no authentication required
 app.use('/api/blogs', blogRoutes);
